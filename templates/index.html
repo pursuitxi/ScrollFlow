@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ScrollFlow · 把网页变成会阅读的 GIF</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #0f2450;
+      --ink-2: #203b69;
+      --muted: #6f82a3;
+      --soft: #9aa9bf;
+      --line: rgba(111, 143, 193, .20);
+      --line-strong: rgba(92, 126, 181, .30);
+      --blue: #5376ff;
+      --blue-2: #74b6ff;
+      --violet: #9a76ff;
+      --cyan: #81d7ff;
+      --bg: #f7faff;
+      --glass: rgba(255,255,255,.72);
+      --glass-strong: rgba(255,255,255,.90);
+      --shadow: 0 30px 80px rgba(67, 91, 148, .15);
+      --shadow-soft: 0 16px 45px rgba(70, 92, 143, .10);
+      --radius-xl: 36px;
+      --radius-lg: 26px;
+      --radius-md: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "DM Sans", "Noto Sans SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 8% 14%, rgba(107, 174, 255, .20), transparent 27%),
+        radial-gradient(circle at 91% 10%, rgba(147, 124, 255, .13), transparent 24%),
+        radial-gradient(circle at 76% 70%, rgba(129, 215, 255, .11), transparent 26%),
+        linear-gradient(180deg, #fbfdff 0%, #f3f7ff 56%, #f8fbff 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .45;
+      background-image:
+        linear-gradient(rgba(72, 103, 160, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(72, 103, 160, .035) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: linear-gradient(to bottom, #000 0, transparent 74%);
+      z-index: 0;
+    }
+
+    button, input, select { font: inherit; }
+    button, .download { -webkit-tap-highlight-color: transparent; }
+
+    .page {
+      width: min(1500px, calc(100% - 44px));
+      margin: 0 auto;
+      padding: 22px 0 54px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ---------------- header ---------------- */
+    .topbar {
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 8px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 13px; min-width: 0; }
+    .brandmark {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: linear-gradient(145deg, #61b9ff 0%, #6078ff 58%, #916dff 100%);
+      box-shadow: 0 13px 28px rgba(84, 116, 255, .25);
+      transform: rotate(-5deg);
+    }
+    .brandcopy { display: flex; align-items: baseline; gap: 14px; min-width: 0; }
+    .brandcopy strong { font-size: 21px; letter-spacing: -.035em; }
+    .brandcopy span { color: #8090a9; font-size: 12px; white-space: nowrap; }
+    .brandcopy i { width: 1px; height: 14px; background: #dbe4f1; display: inline-block; }
+
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.58);
+      color: #7183a2;
+      backdrop-filter: blur(18px);
+      padding: 9px 13px;
+      font-size: 11px;
+      box-shadow: 0 8px 24px rgba(64, 89, 144, .05);
+    }
+    .pill.primary-pill { color: #4f6ce5; background: rgba(238,244,255,.88); border-color: rgba(87,118,255,.18); }
+
+    /* ---------------- poster hero ---------------- */
+    .poster {
+      min-height: 760px;
+      margin-top: 10px;
+      border: 1px solid rgba(199, 215, 238, .72);
+      border-radius: 42px;
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(118deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.91) 43%, rgba(244,249,255,.77) 66%, rgba(237,246,255,.70) 100%);
+      box-shadow: 0 40px 110px rgba(58, 83, 137, .15);
+      isolation: isolate;
+    }
+
+    .poster::before {
+      content: "";
+      position: absolute;
+      width: 720px;
+      height: 720px;
+      border: 1px solid rgba(91, 124, 194, .10);
+      border-radius: 50%;
+      right: -170px;
+      top: -330px;
+      box-shadow:
+        0 0 0 54px rgba(111, 156, 236, .035),
+        0 0 0 108px rgba(111, 156, 236, .028),
+        0 0 0 162px rgba(111, 156, 236, .020);
+      z-index: -1;
+    }
+
+    .poster::after {
+      content: "";
+      position: absolute;
+      width: 520px;
+      height: 520px;
+      right: 7%;
+      bottom: -360px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(104, 160, 255, .23), rgba(156, 121, 255, .05) 54%, transparent 72%);
+      filter: blur(4px);
+      z-index: -1;
+    }
+
+    .poster-grid {
+      display: grid;
+      grid-template-columns: minmax(0, .95fr) minmax(570px, 1.05fr);
+      min-height: 760px;
+    }
+
+    .poster-copy {
+      padding: 72px 24px 56px 64px;
+      position: relative;
+      z-index: 4;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .kicker {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      color: #6179a1;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 12px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .kicker::before { content: ""; width: 42px; height: 1px; background: #7590bd; }
+
+    h1 {
+      font-family: "Noto Serif SC", "Songti SC", STSong, serif;
+      font-size: clamp(54px, 5.2vw, 82px);
+      line-height: 1.08;
+      letter-spacing: -.055em;
+      margin: 20px 0 22px;
+      font-weight: 600;
+      max-width: 730px;
+      color: #102653;
+    }
+    h1 .gradient-word {
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 500;
+      letter-spacing: -.06em;
+      background: linear-gradient(115deg, #3558dd 0%, #5b8cff 46%, #9b79ff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      white-space: nowrap;
+    }
+
+    .lead {
+      max-width: 680px;
+      margin: 0;
+      color: #637797;
+      font-size: 16px;
+      line-height: 1.8;
+      letter-spacing: .01em;
+    }
+
+    .action-card {
+      margin-top: 32px;
+      max-width: 720px;
+      padding: 8px;
+      border-radius: 23px;
+      border: 1px solid rgba(122, 151, 199, .25);
+      background: rgba(255,255,255,.77);
+      box-shadow: 0 20px 48px rgba(68, 93, 148, .11), inset 0 1px 0 rgba(255,255,255,.92);
+      backdrop-filter: blur(22px);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 9px;
+      position: relative;
+    }
+    .action-card::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      pointer-events: none;
+      background: linear-gradient(120deg, rgba(115,174,255,.20), transparent 33%, transparent 70%, rgba(158,123,255,.16));
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      padding: 1px;
+    }
+    .url-field { display: flex; align-items: center; min-width: 0; padding-left: 14px; gap: 10px; }
+    .url-field svg { flex: 0 0 auto; color: #667fff; }
+    .url-field input {
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: #223a62;
+      font-size: 15px;
+      width: 100%;
+      min-width: 0;
+      padding: 15px 0;
+    }
+    .url-field input::placeholder { color: #99a8be; }
+
+    .generate {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      min-width: 160px;
+      min-height: 54px;
+      border-radius: 17px;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      background: linear-gradient(120deg, #4f70ff 0%, #668dff 48%, #a16eff 100%);
+      box-shadow: 0 14px 28px rgba(88, 109, 255, .28);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+    }
+    .generate:hover { transform: translateY(-1px); box-shadow: 0 17px 32px rgba(88, 109, 255, .34); filter: saturate(1.06); }
+    .generate:disabled { opacity: .68; cursor: progress; transform: none; }
+
+    .action-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 11px;
+      padding-left: 4px;
+      color: #8493aa;
+      font-size: 11px;
+    }
+    .action-meta span { display: inline-flex; align-items: center; gap: 7px; }
+    .action-meta .dot { width: 5px; height: 5px; border-radius: 50%; background: #80a0d9; }
+
+    .settings-toggle {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: #617698;
+      cursor: pointer;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+    }
+    .settings-toggle svg { transition: transform .2s ease; }
+    .settings-toggle.open svg { transform: rotate(180deg); }
+
+    .settings {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: max-height .35s ease, opacity .25s ease, margin .25s ease;
+      max-width: 720px;
+    }
+    .settings.open { max-height: 420px; opacity: 1; margin-top: 18px; }
+    .settings-inner {
+      border: 1px solid rgba(128,154,195,.20);
+      background: rgba(247,250,255,.72);
+      border-radius: 20px;
+      padding: 14px;
+      backdrop-filter: blur(18px);
+    }
+    .settings-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 9px; }
+    .field {
+      border: 1px solid rgba(133,159,200,.18);
+      background: rgba(255,255,255,.74);
+      border-radius: 13px;
+      padding: 10px 11px;
+    }
+    .field label { display: block; font-size: 9px; letter-spacing: .02em; color: #8a9ab1; margin-bottom: 6px; }
+    .field input, .field select {
+      width: 100%; border: 0; outline: 0; background: transparent; color: #2d466d; font-weight: 700; font-size: 12px; padding: 0;
+    }
+
+    .status { display: none; max-width: 720px; margin-top: 12px; border-radius: 13px; padding: 10px 12px; font-size: 11px; line-height: 1.55; }
+    .status.show { display: block; }
+    .status.error { color: #a2414a; background: rgba(255,239,241,.92); border: 1px solid #ffd6da; }
+    .status.ok { color: #176e54; background: rgba(237,255,248,.94); border: 1px solid #c8f2e2; }
+
+    .feature-row {
+      margin-top: auto;
+      padding-top: 36px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 8px;
+      max-width: 690px;
+    }
+    .feature { padding: 0 7px; min-width: 0; }
+    .feature-icon {
+      width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center;
+      background: linear-gradient(145deg, rgba(239,245,255,.98), rgba(255,255,255,.86));
+      border: 1px solid rgba(121,151,203,.18);
+      color: #5b79ef;
+      box-shadow: 0 10px 28px rgba(70,95,150,.08);
+      margin-bottom: 10px;
+    }
+    .feature strong { display: block; font-size: 11px; color: #293e62; white-space: nowrap; }
+    .feature span { display: block; margin-top: 3px; color: #8c9aaf; font-size: 9px; white-space: nowrap; }
+
+    /* ---------------- right exhibition visual ---------------- */
+    .poster-art { position: relative; min-height: 760px; overflow: hidden; z-index: 2; }
+    .art-glow {
+      position: absolute;
+      width: 520px; height: 520px; border-radius: 50%;
+      left: 50px; top: 90px;
+      background: radial-gradient(circle at 45% 42%, rgba(255,255,255,.95) 0, rgba(164,210,255,.34) 31%, rgba(127,153,255,.13) 55%, transparent 72%);
+      filter: blur(2px);
+    }
+    .orbit {
+      position: absolute; border: 1px solid rgba(81,123,200,.13); border-radius: 50%;
+      transform: rotate(-18deg);
+    }
+    .orbit.o1 { width: 510px; height: 650px; right: -60px; top: 34px; }
+    .orbit.o2 { width: 410px; height: 560px; right: 20px; top: 82px; }
+
+    .floating-note {
+      position: absolute;
+      left: 36px;
+      top: 156px;
+      width: 196px;
+      padding: 17px 16px;
+      border: 1px solid rgba(109,139,194,.18);
+      border-radius: 20px;
+      background: rgba(255,255,255,.60);
+      box-shadow: 0 20px 60px rgba(63,88,144,.10);
+      backdrop-filter: blur(18px);
+      z-index: 7;
+      transform: rotate(-2deg);
+    }
+    .mini-feature { display: flex; align-items: center; gap: 10px; padding: 10px 3px; border-bottom: 1px solid rgba(124,149,189,.12); }
+    .mini-feature:last-child { border-bottom: 0; }
+    .mini-feature b { font-size: 10px; color: #2f476d; display: block; }
+    .mini-feature small { display: block; margin-top: 2px; color: #90a0b7; font-size: 8px; }
+    .mini-icon { width: 25px; height: 25px; border-radius: 9px; display: grid; place-items: center; color: #5e7cff; background: #f1f5ff; flex: 0 0 auto; }
+
+    .browser-card {
+      position: absolute;
+      z-index: 5;
+      width: 315px;
+      height: 405px;
+      left: 218px;
+      top: 68px;
+      border-radius: 28px 28px 54px 28px;
+      background: linear-gradient(160deg, rgba(255,255,255,.98), rgba(242,247,255,.91));
+      border: 1px solid rgba(106,139,195,.22);
+      box-shadow: 0 34px 70px rgba(54,78,130,.18);
+      transform: perspective(1000px) rotateY(-10deg) rotateZ(3deg);
+      overflow: hidden;
+    }
+    .browser-top { height: 35px; display: flex; align-items: center; gap: 6px; padding: 0 14px; border-bottom: 1px solid rgba(118,147,191,.13); }
+    .browser-top i { width: 6px; height: 6px; border-radius: 50%; background: #bfd0e7; }
+    .address { height: 8px; border-radius: 6px; background: #edf3fb; width: 145px; margin-left: 8px; }
+    .browser-content { padding: 18px; }
+    .mock-kicker { width: 42px; height: 7px; border-radius: 99px; background: #cfdcff; }
+    .mock-title { width: 72%; height: 18px; border-radius: 5px; background: #203b69; opacity: .92; margin-top: 12px; }
+    .mock-title.short { width: 48%; margin-top: 7px; }
+    .mock-image {
+      height: 128px; border-radius: 16px; margin-top: 17px; position: relative; overflow: hidden;
+      background: linear-gradient(145deg, #d9ebff, #b6d5ff 46%, #a9bfff 100%);
+    }
+    .mountain { position: absolute; bottom: -4px; width: 0; height: 0; border-left: 58px solid transparent; border-right: 58px solid transparent; border-bottom: 86px solid rgba(73,99,173,.72); }
+    .mountain.m1 { left: 12px; transform: scale(.9); }
+    .mountain.m2 { right: 5px; border-left-width: 72px; border-right-width: 72px; border-bottom-width: 112px; border-bottom-color: rgba(92,132,204,.54); }
+    .mock-sun { position: absolute; width: 35px; height: 35px; border-radius: 50%; background: rgba(255,255,255,.70); top: 16px; right: 20px; }
+    .mock-line { height: 7px; border-radius: 99px; background: #e4ebf6; margin-top: 10px; }
+    .mock-line.w2 { width: 78%; }.mock-line.w3 { width: 92%; }.mock-line.w4 { width: 60%; }
+
+    .film {
+      position: absolute;
+      z-index: 8;
+      width: 188px;
+      height: 515px;
+      right: 60px;
+      top: 260px;
+      transform: rotate(9deg);
+      filter: drop-shadow(0 22px 30px rgba(72,91,145,.16));
+      animation: floatFilm 7s ease-in-out infinite;
+    }
+    @keyframes floatFilm { 0%,100% { transform: rotate(9deg) translateY(0); } 50% { transform: rotate(7deg) translateY(-8px); } }
+    .film-body {
+      position: absolute; inset: 0;
+      border-radius: 30px 30px 80px 30px;
+      border: 1px solid rgba(94,125,183,.26);
+      background: linear-gradient(180deg, rgba(248,251,255,.92), rgba(224,237,255,.79));
+      padding: 17px 29px;
+      overflow: hidden;
+    }
+    .film-body::before, .film-body::after {
+      content: "";
+      position: absolute; top: 12px; bottom: 12px; width: 11px;
+      background: repeating-linear-gradient(to bottom, rgba(85,111,174,.45) 0 8px, transparent 8px 18px);
+      border-radius: 5px;
+      opacity: .8;
+    }
+    .film-body::before { left: 8px; }.film-body::after { right: 8px; }
+    .frame { height: 104px; border-radius: 13px; background: rgba(255,255,255,.85); border: 1px solid rgba(110,139,188,.16); margin-bottom: 13px; padding: 9px; overflow: hidden; }
+    .frame-img { height: 60px; border-radius: 9px; background: linear-gradient(145deg, #d6e9ff, #abcaf8 55%, #b8b7ff); position: relative; overflow: hidden; }
+    .frame-img::before { content: ""; position: absolute; width: 80px; height: 80px; border-radius: 30% 70% 60% 40%; background: rgba(77,109,185,.42); left: -10px; bottom: -48px; transform: rotate(22deg); }
+    .frame-img::after { content: ""; position: absolute; width: 100px; height: 100px; border-radius: 40% 60% 50% 50%; background: rgba(93,132,203,.35); right: -36px; bottom: -65px; transform: rotate(-14deg); }
+    .frame-lines { padding-top: 7px; }
+    .frame-lines i { display: block; height: 4px; border-radius: 9px; background: #e3eaf5; margin-bottom: 4px; }
+    .frame-lines i:nth-child(2) { width: 72%; }
+
+    .gif-badge {
+      position: absolute;
+      z-index: 10;
+      right: 26px;
+      bottom: 32px;
+      width: 116px;
+      height: 116px;
+      border-radius: 34px;
+      border: 1px solid rgba(255,255,255,.82);
+      background: linear-gradient(145deg, rgba(85,113,255,.89), rgba(116,164,255,.83) 56%, rgba(164,115,255,.84));
+      box-shadow: 0 20px 45px rgba(75,99,191,.28), inset 0 1px 0 rgba(255,255,255,.40);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 34px;
+      transform: rotate(5deg);
+      backdrop-filter: blur(16px);
+    }
+
+    .vertical-copy {
+      position: absolute;
+      right: 5px;
+      top: 120px;
+      color: rgba(35,60,107,.55);
+      writing-mode: vertical-rl;
+      letter-spacing: .22em;
+      font-family: "Noto Serif SC", serif;
+      font-size: 11px;
+      line-height: 2;
+      z-index: 4;
+    }
+    .art-caption {
+      position: absolute;
+      left: 88px;
+      bottom: 40px;
+      color: #7890b3;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 10px;
+      letter-spacing: .22em;
+      line-height: 1.8;
+      text-transform: uppercase;
+      z-index: 4;
+    }
+
+    /* ---------------- result workspace: hidden in poster state ---------------- */
+    .workspace-shell {
+      margin-top: 24px;
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transform: translateY(18px);
+      transition: max-height .7s ease, opacity .45s ease, transform .45s ease;
+    }
+    .workspace-shell.visible { max-height: 1200px; opacity: 1; transform: translateY(0); overflow: visible; }
+    .workspace {
+      display: grid;
+      grid-template-columns: .72fr 1.28fr;
+      gap: 18px;
+    }
+    .panel {
+      border: 1px solid rgba(199,214,237,.80);
+      border-radius: 28px;
+      background: rgba(255,255,255,.76);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(22px);
+      overflow: hidden;
+    }
+    .panel-head { padding: 19px 21px 11px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .panel-title { font-size: 13px; font-weight: 700; color: #314968; }
+    .panel-sub { margin-top: 3px; color: #8b9bb1; font-size: 10px; }
+    .how { padding: 3px 20px 20px; }
+    .step { display: grid; grid-template-columns: 31px 1fr; gap: 11px; padding: 14px 0; border-bottom: 1px solid rgba(128,151,186,.13); }
+    .step:last-child { border-bottom: 0; }
+    .num { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; color: #5875e9; background: #eff4ff; font-size: 10px; font-weight: 800; }
+    .step strong { display: block; margin: 1px 0 4px; font-size: 11px; color: #334967; }
+    .step p { margin: 0; color: #8796ab; font-size: 10px; line-height: 1.55; }
+
+    .preview-wrap { padding: 0 16px 16px; }
+    .preview {
+      min-height: 300px;
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      border: 1px dashed rgba(109,140,191,.35);
+      background: linear-gradient(180deg, rgba(250,252,255,.95), rgba(242,247,254,.93));
+      overflow: hidden;
+    }
+    .empty { text-align: center; color: #8c9bb0; padding: 34px; }
+    .empty-icon { width: 62px; height: 62px; border-radius: 20px; display: grid; place-items: center; margin: 0 auto 13px; background: white; color: #778da9; border: 1px solid rgba(125,151,192,.19); box-shadow: 0 13px 32px rgba(70,95,145,.08); }
+    .empty strong { color: #5c6f89; display: block; font-size: 12px; margin-bottom: 5px; }
+    .empty span { font-size: 10px; }
+
+    .working { width: min(450px, 88%); display: none; text-align: center; }
+    .working.show { display: block; }
+    .scan { height: 176px; border-radius: 17px; background: white; border: 1px solid rgba(119,146,188,.22); overflow: hidden; position: relative; box-shadow: 0 15px 38px rgba(76,95,140,.10); }
+    .fakebar { height: 27px; background: #f0f4fb; border-bottom: 1px solid #e4ebf5; display: flex; align-items: center; gap: 5px; padding: 0 10px; }
+    .fakebar i { width: 6px; height: 6px; border-radius: 50%; background: #c9d4e4; }
+    .fakecontent { padding: 14px; }
+    .line { height: 8px; border-radius: 99px; background: #edf2f8; margin-bottom: 9px; }
+    .line:nth-child(2) { width: 82%; }.line:nth-child(3) { width: 92%; }.line:nth-child(4) { width: 67%; }.line:nth-child(5) { width: 86%; }
+    .scanner { position: absolute; left: 0; right: 0; height: 54px; top: 28px; background: linear-gradient(to bottom, transparent, rgba(95,120,255,.12), transparent); animation: scan 1.8s ease-in-out infinite; }
+    @keyframes scan { 0% { transform: translateY(-20px); } 100% { transform: translateY(150px); } }
+    .progress-label { margin-top: 13px; color: #71819a; font-size: 10px; }
+    .progress { height: 6px; background: #e7eef8; border-radius: 99px; overflow: hidden; margin-top: 8px; }
+    .progress > span { display: block; height: 100%; width: 40%; background: linear-gradient(90deg, var(--blue), #91c8ff); border-radius: inherit; animation: progress 1.6s ease-in-out infinite; }
+    @keyframes progress { 0% { transform: translateX(-110%); } 100% { transform: translateX(360%); } }
+
+    .result { width: 100%; display: none; }
+    .result.show { display: block; }
+    .result img { width: 100%; max-height: 600px; object-fit: contain; display: block; background: white; }
+    .resultbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: rgba(255,255,255,.94); border-top: 1px solid rgba(119,146,188,.17); }
+    .meta { color: #7d8da4; font-size: 10px; line-height: 1.5; }
+    .download { text-decoration: none; color: white; background: #1b345a; font-size: 10px; font-weight: 700; border-radius: 11px; padding: 9px 12px; display: inline-flex; align-items: center; justify-content: center; }
+
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 19px 8px 0;
+      color: #95a2b5;
+      font-size: 10px;
+    }
+    .footer .poetry { font-family: Georgia, "Times New Roman", serif; letter-spacing: .12em; color: #7589a8; }
+
+    @media (max-width: 1180px) {
+      .poster-grid { grid-template-columns: minmax(0,1fr) 500px; }
+      .poster-copy { padding-left: 42px; }
+      .browser-card { left: 150px; }
+      .floating-note { left: 8px; }
+      .film { right: 28px; }
+    }
+
+    @media (max-width: 980px) {
+      .page { width: min(100% - 24px, 1500px); padding-top: 10px; }
+      .brandcopy span, .brandcopy i, .top-actions .pill:first-child { display: none; }
+      .poster { min-height: auto; }
+      .poster-grid { display: block; }
+      .poster-copy { padding: 50px 28px 34px; }
+      .poster-art { min-height: 560px; border-top: 1px solid rgba(120,148,193,.12); }
+      .browser-card { left: 43%; transform: translateX(-50%) perspective(1000px) rotateY(-8deg) rotateZ(2deg); }
+      .floating-note { left: 7%; top: 110px; }
+      .film { right: 11%; top: 190px; }
+      .gif-badge { right: 7%; }
+      .vertical-copy { display: none; }
+      .feature-row { max-width: none; }
+      .workspace { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 650px) {
+      .topbar { height: 58px; padding: 0 2px; }
+      .brandmark { width: 38px; height: 38px; }
+      .brandcopy strong { font-size: 18px; }
+      .top-actions .primary-pill { padding: 8px 10px; }
+      .poster { border-radius: 28px; }
+      .poster-copy { padding: 38px 18px 28px; }
+      .kicker { font-size: 9px; gap: 9px; }
+      .kicker::before { width: 24px; }
+      h1 { font-size: clamp(42px, 14vw, 62px); margin-top: 15px; }
+      .lead { font-size: 13px; }
+      .action-card { grid-template-columns: 1fr; border-radius: 19px; }
+      .url-field { padding-right: 10px; }
+      .generate { width: 100%; min-height: 50px; }
+      .action-meta { flex-wrap: wrap; gap: 9px 13px; }
+      .settings-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .feature-row { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px 8px; }
+      .poster-art { min-height: 510px; }
+      .floating-note { display: none; }
+      .browser-card { left: 42%; top: 62px; width: 270px; height: 350px; }
+      .film { width: 148px; height: 425px; right: 5%; top: 170px; }
+      .frame { height: 83px; }.frame-img { height: 47px; }
+      .gif-badge { width: 90px; height: 90px; font-size: 26px; border-radius: 27px; bottom: 18px; }
+      .art-caption { left: 24px; bottom: 18px; }
+      .footer { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brandmark" aria-hidden="true">
+          <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
+            <path d="M5.5 7.5C7.2 4.8 10 4 12.2 5.1c1 .5 1.8 1.4 2.6 2.2.9.9 1.7 1.7 2.8 1.9 1.2.2 2.4-.4 3.1-1.3M18.5 16.5c-1.7 2.7-4.5 3.5-6.7 2.4-1-.5-1.8-1.4-2.6-2.2-.9-.9-1.7-1.7-2.8-1.9-1.2-.2-2.4.4-3.1 1.3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="brandcopy"><strong>ScrollFlow</strong><i></i><span>让好内容 · 被完整看见</span></div>
+      </div>
+      <div class="top-actions">
+        <span class="pill">Local · Private</span>
+        <span class="pill primary-pill">网页 → GIF</span>
+      </div>
+    </header>
+
+    <section class="poster">
+      <div class="poster-grid">
+        <div class="poster-copy">
+          <div class="kicker">Scroll the web · Share the story</div>
+          <h1>把网页变成<br>会阅读的 <span class="gradient-word">GIF</span></h1>
+          <p class="lead">输入网址，等待页面完整加载后，自动从上往下平滑浏览并生成展示 GIF。适合论文主页、Project Page、产品 Demo 与 PPT 展示。</p>
+
+          <div class="action-card">
+            <div class="url-field">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9.5 14.5 14.5 9.5M7.2 16.8l-1.4 1.4a3.4 3.4 0 1 1-4.8-4.8l3.8-3.8a3.4 3.4 0 0 1 4.8 0M16.8 7.2l1.4-1.4a3.4 3.4 0 1 1 4.8 4.8l-3.8 3.8a3.4 3.4 0 0 1-4.8 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              <input id="url" type="text" placeholder="粘贴网页链接  https://..." autocomplete="off" />
+            </div>
+            <button id="generate" class="generate">
+              <span class="button-label">开始生成</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+
+          <div class="action-meta">
+            <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>录制前会自动等待资源加载完成</span>
+            <span class="dot"></span>
+            <button id="settingsToggle" class="settings-toggle">高级参数 <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+
+          <div id="settings" class="settings">
+            <div class="settings-inner">
+              <div class="settings-grid">
+                <div class="field"><label>浏览器宽度</label><input id="viewportWidth" type="number" value="1440" min="800" max="1920"></div>
+                <div class="field"><label>浏览器高度</label><input id="viewportHeight" type="number" value="900" min="600" max="1200"></div>
+                <div class="field"><label>GIF 输出宽度</label><input id="outputWidth" type="number" value="960" min="480" max="1440"></div>
+                <div class="field"><label>帧率 FPS</label><select id="fps"><option>4</option><option selected>5</option><option>6</option><option>8</option><option>10</option></select></div>
+                <div class="field"><label>滚动速度 px/s</label><input id="scrollSpeed" type="number" value="600" min="200" max="2200" step="20"></div>
+                <div class="field"><label>顶部停留 秒</label><input id="topPause" type="number" value="1.3" min="0" max="5" step="0.1"></div>
+                <div class="field"><label>底部停留 秒</label><input id="bottomPause" type="number" value="1.0" min="0" max="5" step="0.1"></div>
+                <div class="field"><label>最长滚动 秒</label><input id="maxDuration" type="number" value="24" min="5" max="90"></div>
+              </div>
+            </div>
+          </div>
+          <div id="status" class="status"></div>
+
+          <div class="feature-row">
+            <div class="feature"><div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v16M6 13l6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><strong>Auto Scroll</strong><span>自动滚动浏览</span></div>
+            <div class="feature"><div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="m12 3 8 4-8 4-8-4 8-4Zm8 9-8 4-8-4m16 5-8 4-8-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div><strong>Lazy-load Ready</strong><span>智能等待加载</span></div>
+            <div class="feature"><div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 3.5h7M4.6 7.3l3.4 6M7.2 20.2l3.5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><strong>Chromium Capture</strong><span>高清稳定录制</span></div>
+            <div class="feature"><div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.7"/><path d="m6 16 3.5-4 3 3 2.5-2.5 3 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div><strong>Export GIF</strong><span>一键导出分享</span></div>
+          </div>
+        </div>
+
+        <div class="poster-art" aria-hidden="true">
+          <div class="art-glow"></div>
+          <div class="orbit o1"></div><div class="orbit o2"></div>
+
+          <div class="floating-note">
+            <div class="mini-feature"><span class="mini-icon">↓</span><div><b>Auto Scroll</b><small>从顶部自然浏览到底部</small></div></div>
+            <div class="mini-feature"><span class="mini-icon">◇</span><div><b>Lazy-load Ready</b><small>先预滚动，再正式录制</small></div></div>
+            <div class="mini-feature"><span class="mini-icon">◎</span><div><b>Chromium Capture</b><small>真实浏览器渲染页面</small></div></div>
+            <div class="mini-feature"><span class="mini-icon">▣</span><div><b>Export GIF</b><small>完成后直接预览与保存</small></div></div>
+          </div>
+
+          <div class="browser-card">
+            <div class="browser-top"><i></i><i></i><i></i><span class="address"></span></div>
+            <div class="browser-content">
+              <div class="mock-kicker"></div>
+              <div class="mock-title"></div><div class="mock-title short"></div>
+              <div class="mock-image"><div class="mock-sun"></div><div class="mountain m1"></div><div class="mountain m2"></div></div>
+              <div class="mock-line"></div><div class="mock-line w2"></div><div class="mock-line w3"></div><div class="mock-line w4"></div>
+            </div>
+          </div>
+
+          <div class="film">
+            <div class="film-body">
+              <div class="frame"><div class="frame-img"></div><div class="frame-lines"><i></i><i></i></div></div>
+              <div class="frame"><div class="frame-img"></div><div class="frame-lines"><i></i><i></i></div></div>
+              <div class="frame"><div class="frame-img"></div><div class="frame-lines"><i></i><i></i></div></div>
+              <div class="frame"><div class="frame-img"></div><div class="frame-lines"><i></i><i></i></div></div>
+            </div>
+          </div>
+          <div class="gif-badge">GIF</div>
+          <div class="vertical-copy">从滚动的网页<br>到流动的故事</div>
+          <div class="art-caption">Capture<br>Scroll<br>Explore<br>Share</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="workspaceShell" class="workspace-shell">
+      <div class="workspace">
+        <div class="panel">
+          <div class="panel-head"><div><div class="panel-title">生成流程</div><div class="panel-sub">完整加载后才开始正式录制</div></div></div>
+          <div class="how">
+            <div class="step"><div class="num">01</div><div><strong>预加载整页</strong><p>等待 load、网络空闲、字体和图片，并预滚动触发页面下方 lazy-load 内容。</p></div></div>
+            <div class="step"><div class="num">02</div><div><strong>确认页面稳定</strong><p>等待页面高度与资源状态稳定后回到顶部，这一阶段不会写入任何 GIF 帧。</p></div></div>
+            <div class="step"><div class="num">03</div><div><strong>平滑阅读并导出</strong><p>从顶部自然滚到底部逐帧捕获，并自动合成为循环 GIF。</p></div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><div><div class="panel-title">预览与导出</div><div class="panel-sub">结果会保存在本地 outputs 文件夹</div></div></div>
+          <div class="preview-wrap">
+            <div class="preview">
+              <div id="empty" class="empty">
+                <div class="empty-icon"><svg width="27" height="27" viewBox="0 0 24 24" fill="none"><path d="M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" stroke="currentColor" stroke-width="1.5"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+                <strong>准备开始录制</strong><span>生成状态与最终 GIF 会显示在这里</span>
+              </div>
+              <div id="working" class="working">
+                <div class="scan"><div class="fakebar"><i></i><i></i><i></i></div><div class="fakecontent"><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div></div><div class="scanner"></div></div>
+                <div class="progress-label">正在完整预加载网页资源，稳定后才会从顶部开始录制…</div>
+                <div class="progress"><span></span></div>
+              </div>
+              <div id="result" class="result">
+                <img id="gif" alt="Generated scrolling GIF preview" />
+                <div class="resultbar"><div id="meta" class="meta"></div><a id="download" class="download">保存 GIF</a></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span class="poetry">From Web Pages to Moving Stories.</span>
+      <span>ScrollFlow runs locally · Login-only or strongly bot-protected pages may not be capturable.</span>
+    </footer>
+  </main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const status = $('status');
+  const button = $('generate');
+  const buttonLabel = button.querySelector('.button-label');
+
+  $('settingsToggle').addEventListener('click', () => {
+    $('settings').classList.toggle('open');
+    $('settingsToggle').classList.toggle('open');
+  });
+
+  function setStatus(text, kind='error') {
+    status.textContent = text;
+    status.className = `status show ${kind}`;
+  }
+  function clearStatus() { status.className = 'status'; status.textContent = ''; }
+  function value(id) { return $(id).value; }
+
+  function revealWorkspace() {
+    $('workspaceShell').classList.add('visible');
+    window.setTimeout(() => $('workspaceShell').scrollIntoView({behavior: 'smooth', block: 'start'}), 160);
+  }
+
+  async function generate() {
+    clearStatus();
+    const url = value('url').trim();
+    if (!url) { setStatus('请先输入网页地址。'); $('url').focus(); return; }
+
+    revealWorkspace();
+    $('empty').style.display = 'none';
+    $('result').classList.remove('show');
+    $('working').classList.add('show');
+    button.disabled = true;
+    buttonLabel.textContent = '生成中…';
+
+    const payload = {
+      url,
+      viewportWidth: Number(value('viewportWidth')),
+      viewportHeight: Number(value('viewportHeight')),
+      outputWidth: Number(value('outputWidth')),
+      fps: Number(value('fps')),
+      scrollSpeed: Number(value('scrollSpeed')),
+      topPause: Number(value('topPause')),
+      bottomPause: Number(value('bottomPause')),
+      maxDuration: Number(value('maxDuration')),
+      pageWait: 1.5
+    };
+
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.detail ? `${data.error} ${data.detail}` : data.error || '生成失败');
+
+      $('gif').src = `${data.gifUrl}?t=${Date.now()}`;
+      $('download').href = data.downloadUrl;
+      $('download').download = data.filename;
+      const m = data.meta;
+      $('meta').innerHTML = `${m.width}×${m.height}px · ${m.frame_count} 帧 · ${m.duration}s<br>${m.size_mb} MB · 页面高度 ${m.scroll_height}px · 预加载 ${m.preload_seconds}s`;
+      $('working').classList.remove('show');
+      $('result').classList.add('show');
+      setStatus('GIF 已生成完成，可以在下方直接预览或保存。', 'ok');
+    } catch (err) {
+      $('working').classList.remove('show');
+      $('empty').style.display = 'block';
+      setStatus(err.message || '生成失败，请检查网址与网络连接。');
+    } finally {
+      button.disabled = false;
+      buttonLabel.textContent = '开始生成';
+    }
+  }
+
+  button.addEventListener('click', generate);
+  $('url').addEventListener('keydown', (e) => { if (e.key === 'Enter') generate(); });
+</script>
+</body>
+</html>
