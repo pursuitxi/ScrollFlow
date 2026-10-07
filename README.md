@@ -202,8 +202,8 @@ SCROLLFLOW_NO_BROWSER=1 python app.py
 | Viewport height | `900 px` | `600–1200` | Chromium browser height used during capture |
 | GIF width | `960 px` | `480–viewport width` | Final output width; aspect ratio is preserved |
 | FPS | `5` | `2–10` | Frames per second in the final GIF |
-| Scroll speed | `760 px/s` | `200–2200` | Target scrolling speed |
-| Top pause | `1.2 s` | `0–5 s` | Hold time before scrolling starts |
+| Scroll speed | `600 px/s` | `200–2200` | Target scrolling speed |
+| Top pause | `1.3 s` | `0–5 s` | Hold time before scrolling starts |
 | Bottom pause | `1.0 s` | `0–5 s` | Hold time after reaching the bottom |
 | Final page wait | `1.5 s` | `0.2–8 s` | Extra wait after returning to the top |
 | Max scroll duration | `24 s` | `5–90 s` | Hard cap for very long webpages |
